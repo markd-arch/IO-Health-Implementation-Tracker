@@ -353,7 +353,7 @@ function renderTable(projects){
     const issEl=p.issues.length?`<span class="badge ${hasRed?'br':'ba'}">${p.issues.length}</span>`:'<span style="color:var(--text-muted);">—</span>';
     const mdmEl=p.mdm?`<span class="mdm" title="${p.mdm}">${p.mdm}</span>`:'<span style="color:var(--text-muted);">—</span>';
     return`<tr class="dr" onclick="det(${p.id})">
-      <td><div style="font-weight:600;font-size:11px;">${p.name}</div><div style="font-size:9px;color:var(--text-muted);">${p.owner}</div></td>
+      <td><div style="font-weight:600;font-size:11px;">${p.name}</div></td>
       <td><span class="badge ${SB[p.status]||'bgy'}">${p.status}</span></td>
       <td class="date-cell">${fs(p.kickoff)}</td>
       <td class="date-cell ${dc}">${fs(p.goLive)}${d!==null?`<div class="date-sub">${dl}</div>`:''}</td>
