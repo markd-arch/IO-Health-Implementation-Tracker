@@ -367,7 +367,7 @@ function renderTable(projects){
       <td><i class="ti ti-chevron-right" style="color:var(--text-muted);font-size:11px;"></i></td>
     </tr>`;
   }).join('');}
-  document.getElementById('tbody').innerHTML=`<tr class="gr"><td colspan="12">Signed clients</td></tr>${rows(cl)}<tr class="gr"><td colspan="12">Pilots</td></tr>${rows(pi)}`;
+  document.getElementById('tbody').innerHTML=`<tr class="gr"><td colspan="12">Pilots</td></tr>${rows(pi)}<tr class="gr"><td colspan="12">Signed clients</td></tr>${rows(cl)}`;
 }
 
 function det(id){
