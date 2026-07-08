@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IO Health — Implementation Tracker</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/1.119.0/iconfont/tabler-icons.min.css">
+<style>
+  :root {
+    --bg:#f0f2f5;--surface:#fff;--surface-alt:#f7f8fa;--border:#e2e4e9;--border-strong:#c8ccd6;
+    --text:#1a1d23;--text-secondary:#5c6070;--text-muted:#9199ad;
+    --accent:#2563eb;--accent-bg:#eff4ff;--accent-text:#1d4ed8;
+    --success:#16a34a;--success-bg:#f0fdf4;--success-text:#15803d;
+    --warning:#d97706;--warning-bg:#fffbeb;--warning-text:#b45309;
+    --danger:#dc2626;--danger-bg:#fef2f2;--danger-text:#b91c1c;
+    --purple-bg:#f5f3ff;--purple-text:#6d28d9;
+    --radius:6px;--shadow:0 1px 2px rgba(0,0,0,.06);--shadow-md:0 4px 12px rgba(0,0,0,.09);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{width:100%;background:var(--bg);}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);font-size:12px;line-height:1.4;}
+
+  /* ── Header — ultra compact ── */
+  .hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:0 12px;box-shadow:var(--shadow);}
+  .hdr-inner{display:flex;align-items:center;justify-content:space-between;height:42px;gap:8px;}
+  .logo{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;color:var(--text);}
+  .logo-dot{width:20px;height:20px;background:var(--accent);border-radius:5px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;}
+  .hdr-actions{display:flex;gap:5px;}
+
+  /* ── Buttons ── */
+  .btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:var(--radius);font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);}
+  .btn:hover{background:var(--surface-alt);}
+  .btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .btn-primary:hover{background:#1d4ed8;}
+  .btn-xs{padding:3px 7px;font-size:10px;}
+
+  /* ── Main ── */
+  .main{padding:10px 12px;}
+
+  /* ── Metrics — single tight row ── */
+  .metrics{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+  .metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;flex:1;min-width:100px;box-shadow:var(--shadow);}
+  .metric-label{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;}
+  .metric-value{font-size:20px;font-weight:700;line-height:1;}
+
+  /* ── Tabs ── */
+  .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:10px;}
+  .tab{padding:6px 12px;font-size:12px;font-weight:500;color:var(--text-secondary);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+  /* ── Table ── */
+  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:11px;}
+  th{text-align:left;padding:7px 8px;color:var(--text-muted);font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);background:var(--surface-alt);white-space:nowrap;}
+  td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr.dr:hover td{background:#f4f7ff;cursor:pointer;}
+  tr.gr td{background:var(--surface-alt);font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;padding:5px 8px;border-bottom:1px solid var(--border);}
+
+  /* ── Badges ── */
+  .badge{display:inline-flex;align-items:center;padding:1px 6px;border-radius:100px;font-size:10px;font-weight:600;white-space:nowrap;}
+  .bg{background:var(--success-bg);color:var(--success-text);}
+  .bb{background:var(--accent-bg);color:var(--accent-text);}
+  .ba{background:var(--warning-bg);color:var(--warning-text);}
+  .br{background:var(--danger-bg);color:var(--danger-text);}
+  .bgy{background:var(--surface-alt);color:var(--text-secondary);border:1px solid var(--border);}
+  .bp{background:var(--purple-bg);color:var(--purple-text);}
+
+  /* ── Status dot columns ── */
+  .sdot{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:9px;}
+  .sdot-y{background:var(--success-bg);color:var(--success-text);}
+  .sdot-n{background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border);}
+
+  /* ── Product dots ── */
+  .pdots{display:flex;gap:2px;}
+  .pd{width:18px;height:16px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;cursor:pointer;border:1px solid transparent;}
+  .pd-live{background:var(--success-bg);color:var(--success-text);border-color:#86efac;}
+  .pd-impl{background:var(--accent-bg);color:var(--accent-text);border-color:#93c5fd;}
+  .pd-hold{background:var(--warning-bg);color:var(--warning-text);border-color:#fcd34d;}
+  .pd-none{background:var(--surface-alt);color:var(--text-muted);border-color:var(--border);}
+
+  /* ── Progress ── */
+  .pbar{width:38px;height:3px;background:var(--border);border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle;}
+  .pfill{height:100%;border-radius:2px;}
+
+  /* ── MDM chip ── */
+  .mdm{display:inline-block;font-size:9px;font-weight:500;padding:1px 5px;background:var(--surface-alt);border:1px solid var(--border);border-radius:3px;color:var(--text-secondary);max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  /* ── Date display ── */
+  .date-cell{font-size:10px;color:var(--text-secondary);white-space:nowrap;}
+  .date-over{color:var(--danger);}
+  .date-soon{color:var(--warning);}
+  .date-sub{font-size:9px;color:var(--text-muted);}
+
+  /* ── Detail panel ── */
+  .dpanel{background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-top:2px;box-shadow:var(--shadow-md);display:none;}
+  .dpanel.open{display:block;}
+  .dhdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px;}
+  .dname{font-size:14px;font-weight:700;}
+  .dgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);}
+  .dc{background:var(--surface);padding:12px 14px;}
+  .dc.full{grid-column:span 3;}
+  .dc.half{grid-column:span 1;}
+  .dc h4{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;gap:4px;}
+
+  /* ── KV list ── */
+  .kv{list-style:none;}
+  .kv li{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px;gap:6px;}
+  .kv li:last-child{border-bottom:none;}
+  .kvl{color:var(--text-secondary);}
+  .kvv{font-weight:600;text-align:right;}
+  .kvv.over{color:var(--danger);}
+  .kvv.soon{color:var(--warning);}
+
+  /* ── Detail inputs ── */
+  .dinput{width:100%;font-size:11px;padding:5px 7px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface-alt);color:var(--text);margin-top:3px;}
+  .dinput:focus{outline:2px solid var(--accent);border-color:transparent;}
+
+  /* ── Checklist ── */
+  .clsec{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;padding:8px 0 3px;border-bottom:1px solid var(--border-strong);margin-bottom:1px;display:flex;justify-content:space-between;}
+  .cli{display:flex;align-items:flex-start;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);}
+  .cli:last-child{border-bottom:none;}
+  .cli.done .clt{color:var(--text-muted);text-decoration:line-through;}
+  .clchk{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--border-strong);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;margin-top:1px;}
+  .clchk.checked{background:var(--success);border-color:var(--success);color:#fff;}
+  .clt{font-size:11px;flex:1;}
+  .cldr{display:flex;align-items:center;gap:4px;margin-top:2px;}
+  .cldr label{font-size:9px;color:var(--text-muted);}
+  .cldr input{font-size:10px;padding:1px 4px;border:1px solid var(--border);border-radius:3px;background:var(--surface-alt);color:var(--text);}
+
+  /* ── Prod select ── */
+  .prow{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;}
+  .prow:last-child{border-bottom:none;}
+  select{font-size:10px;padding:2px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);cursor:pointer;}
+
+  /* ── Full progress bar ── */
+  .pfull{width:100%;height:3px;background:var(--border);border-radius:2px;margin:5px 0 8px;overflow:hidden;}
+  .pfullfill{height:100%;border-radius:2px;background:var(--accent);}
+
+  /* ── Issues ── */
+  .issli{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;}
+  .issli:last-child{border-bottom:none;}
+
+  /* ── Matrix ── */
+  .msummary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+  .mcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;box-shadow:var(--shadow);}
+  .mcard-name{font-size:12px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:4px;}
+  .mstat{display:flex;justify-content:space-between;font-size:10px;color:var(--text-secondary);padding:2px 0;}
+  .mstat span:last-child{font-weight:700;color:var(--text);}
+  .mcell{width:24px;height:19px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;margin:0 auto;}
+  .mc-live{background:var(--success-bg);color:var(--success-text);}
+  .mc-impl{background:var(--accent-bg);color:var(--accent-text);}
+  .mc-hold{background:var(--warning-bg);color:var(--warning-text);}
+  .mc-none{background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border);}
+  .mleg{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;}
+  .legi{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-secondary);}
+
+  /* ── Export modal ── */
+  .moverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;}
+  .moverlay.open{display:flex;}
+  .modal{background:var(--surface);border-radius:10px;padding:18px;width:500px;max-width:94vw;box-shadow:var(--shadow-md);}
+  .mhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .mtitle{font-size:13px;font-weight:700;}
+  .modal textarea{width:100%;height:120px;font-size:10px;font-family:monospace;padding:7px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface-alt);color:var(--text);resize:none;}
+  .msteps{font-size:11px;color:var(--text-secondary);line-height:1.9;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
+  .msteps strong{color:var(--text);}
+
+  /* ── Toast ── */
+  .toast{position:fixed;bottom:16px;right:16px;background:#1a1d23;color:#fff;padding:7px 12px;border-radius:var(--radius);font-size:11px;font-weight:500;box-shadow:var(--shadow-md);display:none;z-index:300;}
+  .toast.show{display:block;animation:sup .15s ease;}
+  @keyframes sup{from{transform:translateY(5px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+
+  @media(max-width:800px){
+    .dgrid{grid-template-columns:1fr 1fr;}
+    .dc.full{grid-column:span 2;}
+    .msummary{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-inner">
+    <div class="logo"><div class="logo-dot"><i class="ti ti-heartbeat"></i></div>IO Health — Implementation Tracker</div>
+    <div class="hdr-actions">
+      <button class="btn" onclick="openExport()"><i class="ti ti-download"></i> Export</button>
+      <button class="btn" onclick="showTab('matrix')"><i class="ti ti-grid-3x3"></i> Matrix</button>
+      <button class="btn btn-primary" onclick="promptAdd()"><i class="ti ti-plus"></i> Add client</button>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+  <div class="metrics" id="metrics"></div>
+  <div class="tabs">
+    <button class="tab active" id="tab-clients" onclick="showTab('clients')">All clients</button>
+    <button class="tab" id="tab-matrix" onclick="showTab('matrix')">Product matrix</button>
+  </div>
+
+  <div id="view-clients">
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th style="min-width:130px;">Client</th>
+          <th style="min-width:120px;">Status</th>
+          <th style="min-width:68px;">Kickoff</th>
+          <th style="min-width:78px;">Go-live</th>
+          <th style="min-width:76px;">MDM</th>
+          <th style="min-width:58px;" title="Roster Received">Roster<br>Rec.</th>
+          <th style="min-width:58px;" title="Roster Uploaded">Roster<br>Up.</th>
+          <th style="min-width:58px;" title="Configuration Complete">Config<br>Done</th>
+          <th style="min-width:72px;">Products</th>
+          <th style="min-width:80px;">Checklist</th>
+          <th style="min-width:52px;">Issues</th>
+          <th style="width:22px;"></th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="dpanel" id="dpanel"></div>
+  </div>
+
+  <div id="view-matrix" style="display:none;">
+    <div class="msummary" id="msummary"></div>
+    <div class="mleg">
+      <div class="legi"><div class="mcell mc-live">L</div>Live</div>
+      <div class="legi"><div class="mcell mc-impl">I</div>In impl.</div>
+      <div class="legi"><div class="mcell mc-hold">H</div>On hold</div>
+      <div class="legi"><div class="mcell mc-none">—</div>Not using</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th style="text-align:left;min-width:160px;">Client</th>
+          <th>ioAssist</th><th>ioDoc</th><th>ioIQ</th>
+          <th style="text-align:left;min-width:120px;">Live on</th>
+        </tr></thead>
+        <tbody id="mbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Export modal -->
+<div class="moverlay" id="exportModal" onclick="if(event.target===this)closeExport()">
+  <div class="modal">
+    <div class="mhdr"><span class="mtitle">Export to Google Sheets</span><button class="btn btn-xs" onclick="closeExport()"><i class="ti ti-x"></i></button></div>
+    <textarea id="exportText" readonly onclick="this.select()"></textarea>
+    <div style="display:flex;gap:7px;margin-top:7px;align-items:center;">
+      <button class="btn btn-primary btn-xs" onclick="copyJSON()"><i class="ti ti-copy"></i> Copy JSON</button>
+      <span id="copyOk" style="font-size:10px;color:var(--success);display:none;"><i class="ti ti-check"></i> Copied!</span>
+    </div>
+    <div class="msteps"><strong>In Google Sheets:</strong><br>1. JSON Import tab → cell <strong>A2</strong> → paste<br>2. Apps Script → run <strong>syncFromJSON()</strong></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PRODS=['ioAssist','ioDoc','ioIQ'];
+const SORD={'In implementation':0,'Live — expanding':1,'Live':2,'Pilot — active':3,'Pilot — rolling out':4,'Pilot — on hold':5};
+const SB={'In implementation':'bb','Live':'bg','Live — expanding':'bp','Pilot — active':'ba','Pilot — rolling out':'ba','Pilot — on hold':'bgy'};
+
+const CLT=[
+  {section:'Configuration'},
+  {id:'c1',text:'Customization template sent',hasDate:true,done:false,date:''},
+  {id:'c2',text:'Customization template received',hasDate:true,done:false,date:''},
+  {id:'c3',text:'Medication Alerts configured',done:false},
+  {id:'c4',text:'Visit Types set up',done:false},
+  {id:'c5',text:'Prep Pal configured',done:false},
+  {id:'c6',text:'New user template sent',hasDate:true,done:false,date:''},
+  {id:'c7',text:'New user template received',hasDate:true,done:false,date:''},
+  {id:'c8',text:'Users built',done:false},
+  {section:'Onboarding & Training'},
+  {id:'t1',text:'Kickoff call completed',done:false},
+  {id:'t2',text:'MDM type confirmed',done:false},
+  {id:'t3',text:'Admin / super-user training completed',done:false},
+  {id:'t4',text:'Clinician training scheduled',done:false},
+  {id:'t5',text:'Clinician training completed',done:false},
+  {id:'t6',text:'Login tested by users',done:false},
+  {section:'Reporting'},
+  {id:'r1',text:'Week 1 report sent',done:false},
+  {id:'r2',text:'Week 2 report sent',done:false},
+  {id:'r3',text:'Week 4 report sent',done:false},
+  {id:'r4',text:'Week 6 report sent',done:false},
+  {section:'Go-live & Sign-off'},
+  {id:'g1',text:'UAT sign-off received',done:false},
+  {id:'g2',text:'Go-live date confirmed',done:false},
+  {id:'g3',text:'Launch call completed',done:false},
+  {id:'g4',text:'Post-launch check-in scheduled',done:false},
+];
+
+function mkCL(ov){return CLT.map(i=>{if(i.section)return{...i};const o=ov&&ov.find(x=>x.id===i.id);return o?{...i,...o}:{...i};});}
+function rrec(p){return !!(p.checklist.find(x=>x.id==='c7')?.done);}
+function rup(p){return !!(p.checklist.find(x=>x.id==='c8')?.done);}
+function cfg(p){return['c1','c2','c3','c4','c5','c6','c7','c8'].every(id=>p.checklist.find(x=>x.id===id)?.done);}
+
+const DEF=[
+  {id:1,name:'Care Central VNA',type:'client',owner:'Courtney S.',status:'In implementation',kickoff:'2026-07-15',goLive:'',lastUpdated:'2026-07-08',adc:'',mdm:'',products:{ioAssist:'impl',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'t1',done:true},{id:'g3',done:true}]),issues:[{text:'Go-live date not yet confirmed',severity:'amber'}],notes:'July 15 clinician launch call completed.'},
+  {id:2,name:'Triniti Caring',type:'client',owner:'Courtney S.',status:'In implementation',kickoff:'2026-07-01',goLive:'',lastUpdated:'2026-07-08',adc:'',mdm:'',products:{ioAssist:'impl',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'t1',done:true}]),issues:[{text:'No go-live date set yet',severity:'amber'}],notes:'Early stage. Weekly check-ins started.'},
+  {id:3,name:"Danny's HH",type:'client',owner:'Mark D.',status:'Live',kickoff:'',goLive:'',lastUpdated:'2026-07-01',adc:'',mdm:'',products:{ioAssist:'live',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'c1',done:true},{id:'c2',done:true},{id:'c3',done:true},{id:'c4',done:true},{id:'c5',done:true},{id:'c6',done:true},{id:'c7',done:true},{id:'c8',done:true},{id:'t1',done:true},{id:'t3',done:true},{id:'t4',done:true},{id:'t5',done:true},{id:'t6',done:true},{id:'g2',done:true},{id:'g3',done:true}]),issues:[],notes:'Fully live.'},
+  {id:4,name:'Delta',type:'client',owner:'Courtney S.',status:'Live',kickoff:'',goLive:'',lastUpdated:'2026-07-01',adc:'',mdm:'',products:{ioAssist:'live',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'c1',done:true},{id:'c2',done:true},{id:'c3',done:true},{id:'c4',done:true},{id:'c5',done:true},{id:'c6',done:true},{id:'c7',done:true},{id:'c8',done:true},{id:'t1',done:true},{id:'t3',done:true},{id:'t5',done:true},{id:'t6',done:true},{id:'g2',done:true},{id:'g3',done:true}]),issues:[],notes:'Weekly check-ins + monthly workgroup.'},
+  {id:5,name:'Elevate',type:'client',owner:'Hassaan R.',status:'Live',kickoff:'',goLive:'',lastUpdated:'2026-07-01',adc:'',mdm:'',products:{ioAssist:'live',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'c1',done:true},{id:'c2',done:true},{id:'c3',done:true},{id:'c4',done:true},{id:'c5',done:true},{id:'c6',done:true},{id:'c7',done:true},{id:'c8',done:true},{id:'t1',done:true},{id:'t5',done:true},{id:'t6',done:true},{id:'g2',done:true},{id:'g3',done:true}]),issues:[],notes:'Active roll out in progress.'},
+  {id:6,name:'First Call',type:'client',owner:'Mark D.',status:'Live',kickoff:'',goLive:'',lastUpdated:'2026-07-01',adc:'',mdm:'',products:{ioAssist:'live',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'c1',done:true},{id:'c2',done:true},{id:'c3',done:true},{id:'c4',done:true},{id:'c5',done:true},{id:'c6',done:true},{id:'c7',done:true},{id:'c8',done:true},{id:'t1',done:true},{id:'t3',done:true},{id:'t5',done:true},{id:'t6',done:true},{id:'g2',done:true},{id:'g3',done:true}]),issues:[],notes:'Bi-weekly check-ins.'},
+  {id:7,name:'GrandCare',type:'client',owner:'Mark D.',status:'Live',kickoff:'',goLive:'',lastUpdated:'2026-06-01',adc:'',mdm:'',products:{ioAssist:'live',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'c1',done:true},{id:'c2',done:true},{id:'c3',done:true},{id:'c4',done:true},{id:'c5',done:true},{id:'c6',done:true},{id:'c7',done:true},{id:'c8',done:true},{id:'t1',done:true},{id:'t5',done:true},{id:'t6',done:true},{id:'g2',done:true},{id:'g3',done:true}]),issues:[],notes:'Fully deployed.'},
+  {id:8,name:'Halcyon Home',type:'client',owner:'Mark D.',status:'Live',kickoff:'',goLive:'',lastUpdated:'2026-07-01',adc:'',mdm:'',products:{ioAssist:'live',ioDoc:'live',ioIQ:'none'},checklist:mkCL([{id:'c1',done:true},{id:'c2',done:true},{id:'c3',done:true},{id:'c4',done:true},{id:'c5',done:true},{id:'c6',done:true},{id:'c7',done:true},{id:'c8',done:true},{id:'t1',done:true},{id:'t3',done:true},{id:'t5',done:true},{id:'t6',done:true},{id:'g2',done:true},{id:'g3',done:true}]),issues:[],notes:'Live for hospice and home health.'},
+  {id:9,name:'HCX',type:'client',owner:'Courtney S.',status:'Live',kickoff:'',goLive:'',lastUpdated:'2026-07-01',adc:'',mdm:'',products:{ioAssist:'live',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'c1',done:true},{id:'c2',done:true},{id:'c3',done:true},{id:'c4',done:true},{id:'c5',done:true},{id:'c6',done:true},{id:'c7',done:true},{id:'c8',done:true},{id:'t1',done:true},{id:'t5',done:true},{id:'t6',done:true},{id:'g2',done:true},{id:'g3',done:true}]),issues:[],notes:'Bi-weekly check-ins.'},
+  {id:10,name:'Jet',type:'client',owner:'David B.',status:'Live',kickoff:'',goLive:'',lastUpdated:'2026-07-01',adc:'',mdm:'',products:{ioAssist:'live',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'c1',done:true},{id:'c2',done:true},{id:'c3',done:true},{id:'c4',done:true},{id:'c5',done:true},{id:'c6',done:true},{id:'c7',done:true},{id:'c8',done:true},{id:'t1',done:true},{id:'t3',done:true},{id:'t5',done:true},{id:'t6',done:true},{id:'g2',done:true}]),issues:[],notes:'Weekly check-ins.'},
+  {id:11,name:'Shining Star Home Care',type:'client',owner:'Mark D.',status:'Live',kickoff:'',goLive:'',lastUpdated:'2026-07-01',adc:'',mdm:'',products:{ioAssist:'live',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'c1',done:true},{id:'c2',done:true},{id:'c3',done:true},{id:'c4',done:true},{id:'c5',done:true},{id:'c6',done:true},{id:'c7',done:true},{id:'c8',done:true},{id:'t1',done:true},{id:'t5',done:true},{id:'t6',done:true},{id:'g2',done:true},{id:'g3',done:true}]),issues:[],notes:'Bi-weekly check-ins.'},
+  {id:12,name:'TruHeart',type:'client',owner:'Mark D.',status:'Live',kickoff:'',goLive:'',lastUpdated:'2026-06-01',adc:'',mdm:'',products:{ioAssist:'live',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'c1',done:true},{id:'c2',done:true},{id:'c3',done:true},{id:'c4',done:true},{id:'c5',done:true},{id:'c6',done:true},{id:'c7',done:true},{id:'c8',done:true},{id:'t1',done:true},{id:'t5',done:true},{id:'t6',done:true},{id:'g2',done:true},{id:'g3',done:true}]),issues:[],notes:'Fully deployed.'},
+  {id:13,name:'Wellbound',type:'client',owner:'Mark D.',status:'Live',kickoff:'',goLive:'',lastUpdated:'2026-06-01',adc:'',mdm:'',products:{ioAssist:'live',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'c1',done:true},{id:'c2',done:true},{id:'c3',done:true},{id:'c4',done:true},{id:'c5',done:true},{id:'c6',done:true},{id:'c7',done:true},{id:'c8',done:true},{id:'t1',done:true},{id:'t5',done:true},{id:'t6',done:true},{id:'g2',done:true},{id:'g3',done:true}]),issues:[],notes:'Fully deployed.'},
+  {id:14,name:'Agape Care Group',type:'pilot',owner:'Mark D.',status:'Pilot — active',kickoff:'',goLive:'',lastUpdated:'2026-07-06',adc:'',mdm:'',products:{ioAssist:'impl',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'t1',done:true},{id:'t3',done:true},{id:'t5',done:true},{id:'t6',done:true},{id:'r1',done:true},{id:'r2',done:true}]),issues:[],notes:'Weekly check-ins. Training + adoption focus.'},
+  {id:15,name:'PIHC',type:'pilot',owner:'Mark D.',status:'Pilot — active',kickoff:'',goLive:'',lastUpdated:'2026-07-08',adc:'',mdm:'',products:{ioAssist:'impl',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'t1',done:true},{id:'t4',done:true},{id:'r1',done:true}]),issues:[],notes:'Weekly check-ins. Onboarding clinicians.'},
+  {id:16,name:'Reliant',type:'pilot',owner:'Mark D.',status:'Pilot — rolling out',kickoff:'2026-07-01',goLive:'',lastUpdated:'2026-07-08',adc:'',mdm:'',products:{ioAssist:'impl',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'t1',done:true}]),issues:[],notes:'New pilot, just rolling out.'},
+  {id:17,name:'TCT — The Care Team',type:'pilot',owner:'Mark D.',status:'Pilot — active',kickoff:'',goLive:'2026-10-01',lastUpdated:'2026-07-08',adc:'Carmel:38|Crown Point:52|Mishawaka:81|New Philadelphia:67',mdm:'',products:{ioAssist:'impl',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'c1',done:true},{id:'c2',done:true},{id:'t1',done:true},{id:'t3',done:true},{id:'t5',done:true},{id:'t6',done:true},{id:'r1',done:true},{id:'r2',done:true},{id:'r3',done:true},{id:'r4',done:true}]),issues:[{text:'Indiana user list needed before Jul 31 rollout',severity:'red'},{text:'Bethlehem branch has reported issues',severity:'amber'}],notes:'Ohio done. Indiana Jul 31. Illinois + Michigan TBD.'},
+  {id:18,name:'VNATC',type:'pilot',owner:'Mark D.',status:'Pilot — active',kickoff:'',goLive:'',lastUpdated:'2026-07-08',adc:'',mdm:'',products:{ioAssist:'impl',ioDoc:'none',ioIQ:'none'},checklist:mkCL([{id:'t1',done:true},{id:'r1',done:true}]),issues:[],notes:'Weekly check-ins every Monday.'},
+  {id:19,name:'Covenant Health',type:'pilot',owner:'Hassaan R.',status:'Pilot — on hold',kickoff:'',goLive:'',lastUpdated:'2026-07-01',adc:'',mdm:'',products:{ioAssist:'hold',ioDoc:'none',ioIQ:'none'},checklist:mkCL([]),issues:[{text:'Waiting on new MDM before pilot can proceed',severity:'red'}],notes:'On hold until new MDM in place.'},
+  {id:20,name:'VitalCaring',type:'pilot',owner:'Mark D.',status:'Pilot — on hold',kickoff:'',goLive:'',lastUpdated:'2026-07-01',adc:'',mdm:'',products:{ioAssist:'hold',ioDoc:'none',ioIQ:'none'},checklist:mkCL([]),issues:[{text:'Pilot paused — no activity',severity:'amber'}],notes:'On hold.'},
+];
+
+const KEY='io_v3';let openId=null;
+function load(){try{const s=localStorage.getItem(KEY);return s?JSON.parse(s):DEF;}catch{return DEF;}}
+function save(p){try{localStorage.setItem(KEY,JSON.stringify(p));}catch{}}
+function hc(h){return h>=70?'#16a34a':h>=40?'#d97706':'#dc2626';}
+function du(d){if(!d)return null;return Math.round((new Date(d)-new Date())/86400000);}
+function fd(d){if(!d)return'—';return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+function fs(d){if(!d)return'—';const dt=new Date(d);return(dt.getMonth()+1)+'/'+(dt.getDate())+'/'+(String(dt.getFullYear()).slice(-2));}
+function its(cl){return cl.filter(x=>!x.section);}
+function pct(p){const it=its(p.checklist);const d=it.filter(x=>x.done).length;return it.length?Math.round(d/it.length*100):0;}
+function srt(arr){return[...arr].sort((a,b)=>{const s=(SORD[a.status]??9)-(SORD[b.status]??9);return s!==0?s:a.name.localeCompare(b.name);});}
+function dot(yes){return`<div class="sdot ${yes?'sdot-y':'sdot-n'}">${yes?'<i class="ti ti-check" style="font-size:9px;"></i>':'<i class="ti ti-minus" style="font-size:9px;"></i>'}</div>`;}
+
+function renderMetrics(projects){
+  const cl=projects.filter(p=>p.type==='client'),pi=projects.filter(p=>p.type==='pilot');
+  document.getElementById('metrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Signed clients</div><div class="metric-value">${cl.length}</div></div>
+    <div class="metric"><div class="metric-label">Live</div><div class="metric-value" style="color:var(--success)">${cl.filter(p=>p.status==='Live'||p.status==='Live — expanding').length}</div></div>
+    <div class="metric"><div class="metric-label">In implementation</div><div class="metric-value" style="color:var(--accent)">${projects.filter(p=>p.status==='In implementation').length}</div></div>
+    <div class="metric"><div class="metric-label">Active pilots</div><div class="metric-value" style="color:var(--warning)">${pi.filter(p=>p.status==='Pilot — active'||p.status==='Pilot — rolling out').length}</div></div>
+    <div class="metric"><div class="metric-label">On hold</div><div class="metric-value" style="color:var(--text-muted)">${projects.filter(p=>p.status.includes('on hold')).length}</div></div>`;
+}
+
+function renderTable(projects){
+  const s=srt(projects);
+  const cl=s.filter(p=>p.type==='client'),pi=s.filter(p=>p.type==='pilot');
+  function rows(list){return list.map(p=>{
+    const p_=pct(p),it=its(p.checklist),done=it.filter(x=>x.done).length;
+    const d=du(p.goLive);
+    const dc=d!==null&&d<0?'date-over':d!==null&&d<=14?'date-soon':'';
+    const dl=d===null?'—':d<0?`${Math.abs(d)}d over`:`${d}d`;
+    const dots=PRODS.map(pr=>{const st=p.products[pr]||'none';const cls={live:'pd-live',impl:'pd-impl',hold:'pd-hold',none:'pd-none'}[st];const lbl={live:'L',impl:'I',hold:'H',none:'—'}[st];return`<div class="pd ${cls}" onclick="event.stopPropagation();cyc(${p.id},'${pr}')" title="${pr}: ${st}">${lbl}</div>`;}).join('');
+    const hasRed=p.issues.some(i=>i.severity==='red');
+    const issEl=p.issues.length?`<span class="badge ${hasRed?'br':'ba'}">${p.issues.length}</span>`:'<span style="color:var(--text-muted);">—</span>';
+    const mdmEl=p.mdm?`<span class="mdm" title="${p.mdm}">${p.mdm}</span>`:'<span style="color:var(--text-muted);">—</span>';
+    return`<tr class="dr" onclick="det(${p.id})">
+      <td><div style="font-weight:600;font-size:11px;">${p.name}</div><div style="font-size:9px;color:var(--text-muted);">${p.owner}</div></td>
+      <td><span class="badge ${SB[p.status]||'bgy'}">${p.status}</span></td>
+      <td class="date-cell">${fs(p.kickoff)}</td>
+      <td class="date-cell ${dc}">${fs(p.goLive)}${d!==null?`<div class="date-sub">${dl}</div>`:''}</td>
+      <td>${mdmEl}</td>
+      <td style="text-align:center;">${dot(rrec(p))}</td>
+      <td style="text-align:center;">${dot(rup(p))}</td>
+      <td style="text-align:center;">${dot(cfg(p))}</td>
+      <td><div class="pdots">${dots}</div></td>
+      <td><div style="display:flex;align-items:center;gap:3px;"><div class="pbar"><div class="pfill" style="width:${p_}%;background:${hc(p_)};"></div></div><span style="font-size:9px;color:var(--text-muted);">${p_}%</span></div><div style="font-size:9px;color:var(--text-muted);">${done}/${it.length}</div></td>
+      <td>${issEl}</td>
+      <td><i class="ti ti-chevron-right" style="color:var(--text-muted);font-size:11px;"></i></td>
+    </tr>`;
+  }).join('');}
+  document.getElementById('tbody').innerHTML=`<tr class="gr"><td colspan="12">Signed clients</td></tr>${rows(cl)}<tr class="gr"><td colspan="12">Pilots</td></tr>${rows(pi)}`;
+}
+
+function det(id){
+  const projects=load(),p=projects.find(x=>x.id===id);
+  const panel=document.getElementById('dpanel');
+  if(openId===id){panel.classList.remove('open');openId=null;return;}
+  openId=id;panel.classList.add('open');
+  const it=its(p.checklist),done=it.filter(x=>x.done).length,p_=it.length?Math.round(done/it.length*100):0;
+  const d=du(p.goLive),dc=d!==null&&d<0?'over':d!==null&&d<=14?'soon':'';
+  let clHtml='';const secMap={},secOrd=[];let cs='';
+  p.checklist.forEach(i=>{if(i.section){cs=i.section;secMap[cs]=[];secOrd.push(cs);}else if(cs)secMap[cs].push(i);});
+  secOrd.forEach(sec=>{
+    const si=secMap[sec],sd=si.filter(x=>x.done).length;
+    clHtml+=`<div class="clsec"><span>${sec}</span><span>${sd}/${si.length}</span></div>`;
+    clHtml+=si.map(c=>`<div class="cli ${c.done?'done':''}">
+      <div class="clchk ${c.done?'checked':''}" onclick="chk(${p.id},'${c.id}')">${c.done?'<i class="ti ti-check" style="font-size:8px;"></i>':''}</div>
+      <div style="flex:1;"><div class="clt">${c.text}</div>
+      ${c.hasDate?`<div class="cldr"><label>Date:</label><input type="date" value="${c.date||''}" onchange="sdt(${p.id},'${c.id}',this.value)" onclick="event.stopPropagation()"><span style="font-size:9px;color:var(--text-muted);">${c.date?fd(c.date):''}</span></div>`:''}</div>
+    </div>`).join('');
+  });
+  const pr=PRODS.map(pr=>{const s=p.products[pr]||'none';return`<div class="prow"><span style="font-weight:600;">${pr}</span><select onchange="uprod(${p.id},'${pr}',this.value)"><option value="none" ${s==='none'?'selected':''}>Not using</option><option value="impl" ${s==='impl'?'selected':''}>In implementation</option><option value="live" ${s==='live'?'selected':''}>Live</option><option value="hold" ${s==='hold'?'selected':''}>On hold</option></select></div>`;}).join('');
+  panel.innerHTML=`
+    <div class="dhdr">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span class="dname">${p.name}</span>
+        <span class="badge ${SB[p.status]||'bgy'}">${p.status}</span>
+        <span style="font-size:10px;color:var(--text-muted);">${p.owner} · ${p.type==='pilot'?'Pilot':'Signed client'}</span>
+      </div>
+      <button class="btn btn-xs" onclick="openId=null;document.getElementById('dpanel').classList.remove('open')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="dgrid">
+      <div class="dc half"><h4><i class="ti ti-calendar"></i> Key dates</h4>
+        <ul class="kv">
+          <li><span class="kvl">Kickoff</span><span class="kvv">${fd(p.kickoff)}</span></li>
+          <li><span class="kvl">Go-live</span><span class="kvv ${dc}">${fd(p.goLive)}${d!==null?` (${d<0?Math.abs(d)+'d over':d+'d away'})`:''}</span></li>
+          <li><span class="kvl">Last updated</span><span class="kvv">${fd(p.lastUpdated)}</span></li>
+        </ul>
+      </div>
+      <div class="dc half"><h4><i class="ti ti-device-mobile"></i> MDM</h4>
+        <input class="dinput" type="text" placeholder="e.g. HHAeXchange, Alayacare..." value="${p.mdm||''}" onchange="uf(${p.id},'mdm',this.value)" onclick="event.stopPropagation()">
+        <h4 style="margin-top:12px;"><i class="ti ti-box"></i> Products</h4>${pr}
+      </div>
+      <div class="dc half"><h4><i class="ti ti-building"></i> ADC count</h4>
+        <input class="dinput" type="text" placeholder="e.g. Branch A: 42 | Branch B: 31" value="${p.adc||''}" onchange="uf(${p.id},'adc',this.value)" onclick="event.stopPropagation()">
+        ${p.adc?`<div style="font-size:10px;color:var(--text-muted);margin-top:3px;">${p.adc}</div>`:''}
+      </div>
+      <div class="dc full"><h4><i class="ti ti-checklist"></i> Implementation checklist — ${done}/${it.length} (${p_}%)</h4>
+        <div class="pfull"><div class="pfullfill" style="width:${p_}%;"></div></div>
+        ${clHtml}
+      </div>
+      ${p.issues.length?`<div class="dc full"><h4><i class="ti ti-alert-triangle"></i> Issues (${p.issues.length})</h4>${p.issues.map(i=>`<div class="issli"><span style="flex:1;">${i.text}</span><span class="badge ${i.severity==='red'?'br':'ba'}">${i.severity==='red'?'High':'Med'}</span></div>`).join('')}</div>`:''}
+      ${p.notes?`<div class="dc full"><h4><i class="ti ti-notes"></i> Notes</h4><div style="font-size:11px;color:var(--text-secondary);line-height:1.6;padding:7px 9px;background:var(--surface-alt);border-radius:var(--radius);border:1px solid var(--border);">${p.notes}</div></div>`:''}
+    </div>`;
+  setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'nearest'}),50);
+}
+
+function chk(pid,cid){const p=load(),proj=p.find(x=>x.id===pid);if(!proj)return;const c=proj.checklist.find(x=>x.id===cid);if(!c)return;c.done=!c.done;proj.lastUpdated=new Date().toISOString().split('T')[0];save(p);render();const pv=openId;openId=null;setTimeout(()=>{openId=pv;det(pv);},10);toast('Updated');}
+function sdt(pid,cid,val){const p=load(),proj=p.find(x=>x.id===pid);if(!proj)return;const c=proj.checklist.find(x=>x.id===cid);if(!c)return;c.date=val;if(val&&!c.done)c.done=true;proj.lastUpdated=new Date().toISOString().split('T')[0];save(p);render();const pv=openId;openId=null;setTimeout(()=>{openId=pv;det(pv);},10);toast('Date saved');}
+function uf(pid,field,val){const p=load(),proj=p.find(x=>x.id===pid);if(!proj)return;proj[field]=val;proj.lastUpdated=new Date().toISOString().split('T')[0];save(p);render();toast(`${field} updated`);}
+function cyc(pid,prod){const p=load(),proj=p.find(x=>x.id===pid);if(!proj)return;const cur=proj.products[prod]||'none';proj.products[prod]={none:'impl',impl:'live',live:'hold',hold:'none'}[cur];save(p);render();toast(`${prod} → ${proj.products[prod]}`);}
+function uprod(pid,prod,val){const p=load(),proj=p.find(x=>x.id===pid);if(!proj)return;proj.products[prod]=val;save(p);render();toast(`${prod} updated`);}
+function promptAdd(){const name=prompt('Client name:');if(!name)return;const type=confirm('Signed client? OK=client, Cancel=pilot.')?'client':'pilot';const p=load();const ni=Math.max(...p.map(x=>x.id))+1;p.push({id:ni,name:name.trim(),type,owner:'',status:type==='client'?'In implementation':'Pilot — active',kickoff:'',goLive:'',lastUpdated:new Date().toISOString().split('T')[0],adc:'',mdm:'',products:{ioAssist:'none',ioDoc:'none',ioIQ:'none'},checklist:mkCL([]),issues:[],notes:''});save(p);render();toast(`${name} added`);}
+
+function renderMatrix(projects){
+  const s=srt(projects),tot={};
+  PRODS.forEach(pr=>{tot[pr]={live:0,impl:0,hold:0,none:0};s.forEach(p=>{tot[pr][p.products[pr]||'none']++;});});
+  document.getElementById('msummary').innerHTML=PRODS.map(pr=>{const t=tot[pr];return`<div class="mcard"><div class="mcard-name"><i class="ti ti-box" style="color:var(--accent);font-size:12px;"></i>${pr}</div><div class="mstat"><span>Live</span><span>${t.live}</span></div><div class="mstat"><span>In implementation</span><span>${t.impl}</span></div><div class="mstat"><span>On hold</span><span>${t.hold}</span></div><div class="mstat"><span>Not using</span><span>${t.none}</span></div></div>`;}).join('');
+  const cl=s.filter(p=>p.type==='client'),pi=s.filter(p=>p.type==='pilot');
+  const PL={live:'L',impl:'I',hold:'H',none:'—'},PC={live:'mc-live',impl:'mc-impl',hold:'mc-hold',none:'mc-none'};
+  function mr(list,lbl){return`<tr class="gr"><td colspan="5">${lbl}</td></tr>`+list.map(p=>`<tr><td style="font-weight:600;font-size:11px;">${p.name}<div style="font-size:9px;color:var(--text-muted);font-weight:400;">${p.owner}</div></td>${PRODS.map(pr=>{const st=p.products[pr]||'none';return`<td><div class="mcell ${PC[st]}">${PL[st]}</div></td>`;}).join('')}<td>${PRODS.filter(pr=>p.products[pr]==='live').map(pr=>`<span class="badge bg" style="font-size:9px;margin-right:2px;">${pr}</span>`).join('')||'<span style="color:var(--text-muted);font-size:10px;">—</span>'}</td></tr>`).join('');}
+  document.getElementById('mbody').innerHTML=mr(cl,'Signed clients')+mr(pi,'Pilots');
+}
+
+function openExport(){document.getElementById('exportText').value=JSON.stringify(load());document.getElementById('exportModal').classList.add('open');document.getElementById('copyOk').style.display='none';}
+function closeExport(){document.getElementById('exportModal').classList.remove('open');}
+function copyJSON(){const ta=document.getElementById('exportText');ta.select();try{document.execCommand('copy');document.getElementById('copyOk').style.display='inline';setTimeout(()=>document.getElementById('copyOk').style.display='none',2500);toast('Copied!');}catch{toast('Select text and copy manually');}}
+function showTab(t){document.getElementById('view-clients').style.display=t==='clients'?'block':'none';document.getElementById('view-matrix').style.display=t==='matrix'?'block':'none';document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.getElementById('tab-'+t).classList.add('active');}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
+function render(){const p=load();renderMetrics(p);renderTable(p);renderMatrix(p);}
+render();
+</script>
+</body>
+</html>
